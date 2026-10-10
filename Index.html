@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cousins Battle Arena</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#08091b;color:white;
+ font-family:Arial,sans-serif;text-align:center;
+ overflow-x:hidden;
+}
+header{padding:18px 8px;background:#141432}
+h1{color:#66eaff;text-shadow:0 0 15px #00bfff}
+.arena{
+ position:relative;overflow:hidden;padding:15px 8px;
+ background:radial-gradient(circle,#29245c,#09091b 75%);
+ min-height:290px;
+}
+.fighters{
+ display:flex;justify-content:space-around;
+ align-items:center;gap:5px;flex-wrap:wrap;
+}
+.fighter{
+ width:30%;min-width:90px;padding:8px 3px;
+ border:2px solid #444;border-radius:15px;
+ background:#17172e;transition:.2s;
+}
+.avatar{font-size:55px;display:block}
+.name{font-weight:bold;font-size:16px}
+.hp{height:9px;background:#444;border-radius:10px;margin:8px 2px}
+.hp div{height:100%;background:#42ff90;border-radius:10px;width:100%}
+.harish{
+ border-color:#00d9ff;
+ box-shadow:0 0 18px #008cff;
+ animation:aura 1s infinite alternate;
+}
+@keyframes aura{
+ to{box-shadow:0 0 30px #00d9ff,0 0 50px #2758ff}
+}
+button{
+ border:0;border-radius:12px;padding:12px 15px;
+ margin:5px;font-size:15px;font-weight:bold;
+ color:white;background:#643dff;
+}
+button:active{transform:scale(.94)}
+.attack{background:#e52e68}
+.special{background:#008eff}
+.heal{background:#148b65}
+#message{min-height:50px;padding:12px;color:#ffe66d;font-weight:bold}
+#bossBox{margin:12px auto;max-width:330px;padding:10px}
+#bossHp{height:14px;background:#555;border-radius:12px;overflow:hidden}
+#bossFill{width:100%;height:100%;background:#ff355d;transition:width .3s}
+#boss{font-size:65px}
+#effects{
+ position:absolute;inset:0;pointer-events:none;
+ display:flex;align-items:center;justify-content:center;
+ font-size:50px;font-weight:bold;
+}
+.boom{animation:boom .55s ease-out}
+@keyframes boom{
+ 0%{transform:scale(.2);opacity:0}
+ 50%{transform:scale(1.7);opacity:1}
+ 100%{transform:scale(1);opacity:0}
+}
+.shake{animation:shake .2s}
+@keyframes shake{
+ 0%,100%{transform:translateX(0)}
+ 25%{transform:translateX(-8px)}
+ 75%{transform:translateX(8px)}
+}
+#end{
+ display:none;padding:22px;background:#19163c;
+ border:2px solid #00d9ff;border-radius:20px;margin:15px;
+}
+#end h2{color:#6af4ff}
+.small{color:#ccc;font-size:13px}
+</style>
+</head>
+
+<body>
+<header>
+ <h1>⚔️ COUSINS BATTLE ARENA ⚔️</h1>
+ <p>3 cousins. 1 legendary battle!</p>
+</header>
+
+<div class="arena" id="arena">
+ <div id="effects"></div>
+
+ <div class="fighters">
+  <div class="fighter" id="cardHasini">
+   <span class="avatar">🌸</span>
+   <div class="name">HASINI</div>
+   <div>💗 Heart Magic</div>
+   <div class="hp"><div id="hpHasini"></div></div>
+   <small id="txtHasini">100 HP</small>
+  </div>
+
+  <div class="fighter" id="cardHarini">
+   <span class="avatar">🦸‍♀️</span>
+   <div class="name">HARINI</div>
+   <div>💜 Thunder Shield</div>
+   <div class="hp"><div id="hpHarini"></div></div>
+   <small id="txtHarini">100 HP</small>
+  </div>
+
+  <div class="fighter harish" id="cardHarish">
+   <span class="avatar" id="harishAvatar">⚡</span>
+   <div class="name">HARISH</div>
+   <div id="harishPower">🔵 LEGENDARY AURA</div>
+   <div class="hp"><div id="hpHarish"></div></div>
+   <small id="txtHarish">100 HP</small>
+  </div>
+ </div>
+
+ <div id="bossBox">
+  <div id="boss">👹</div>
+  <b>SHADOW BOSS</b>
+  <div id="bossHp"><div id="bossFill"></div></div>
+  <small id="bossText">300 / 300 HP</small>
+ </div>
+</div>
+
+<div id="message">The Shadow Boss has arrived! Choose your attack!</div>
+
+<div>
+ <button class="attack" onclick="attack('Hasini')">🌸 Hasini Attack</button>
+ <button class="attack" onclick="attack('Harini')">💜 Harini Attack</button>
+ <button class="special" onclick="attack('Harish')">⚡ HARISH POWER</button>
+</div>
+<div>
+ <button class="heal" onclick="healTeam()">💚 Team Heal</button>
+ <button onclick="toggleMode()">🔥 Harish Super Mode</button>
+</div>
+
+<p class="small">Defeat the boss to unlock the secret ending!</p>
+
+<div id="end">
+ <h2>🏆 VICTORY, COUSINS! 🏆</h2>
+ <div style="font-size:65px">👑⚡🎉</div>
+ <h2>HARISH IS THE LEGEND!</h2>
+ <p id="dialogue">The final message is loading...</p>
+ <button onclick="speakAgain()">🔊 Play My Message Again</button>
+ <button onclick="replay()">🔁 Play Again</button>
+ <p class="small">Voice uses your phone's available text-to-speech voice.</p>
+</div>
+
+<script>
+let boss = 300;
+let hp = {Hasini:100,Harini:100,Harish:100};
+let superMode = false;
+let finished = false;
+let busy = false;
+let turn = 0;
+
+const finalSpeech =
+"Hey Hasini! Hey Harini! And hey Harish! " +
+"Congratulations, cousins! You defeated the Shadow Boss! " +
+"But remember, Hasini brings the magic, Harini brings the power, " +
+"and Harish is the legendary hero! " +
+"Just kidding! You three are an unbeatable team! " +
+"This is Vishak signing off! Bye, cousins! See you in the next battle!";
+
+function say(text){
+ document.getElementById("message").textContent = text;
+}
+
+function effect(text){
+ const e = document.getElementById("effects");
+ e.textContent = text;
+ e.classList.remove("boom");
+ void e.offsetWidth;
+ e.classList.add("boom");
+ document.getElementById("arena").classList.add("shake");
+ setTimeout(()=>document.getElementById("arena").classList.remove("shake"),220);
+}
+
+function update(){
+ for(const name of ["Hasini","Harini","Harish"]){
+  document.getElementById("hp"+name).style.width =
+   hp[name]+"%";
+  document.getElementById("txt"+name).textContent =
+   hp[name]+" HP";
+ }
+ document.getElementById("bossFill").style.width =
+  (boss/300*100)+"%";
+ document.getElementById("bossText").textContent =
+  Math.max(0,boss)+" / 300 HP";
+}
+
+function attack(name){
+ if(finished || busy)return;
+ busy = true;
+ turn++;
+
+ let damage;
+ if(name==="Harish"){
+  damage = superMode ? 90 : 35;
+  effect(superMode ? "⚡ ULTRA BLAST ⚡" : "🔵 LIGHTNING!");
+ }else if(name==="Hasini"){
+  damage=25;
+  effect("💗 HEART EXPLOSION!");
+ }else{
+  damage=25;
+  effect("💜 THUNDER STRIKE!");
+ }
+
+ boss=Math.max(0,boss-damage);
+ say(name+" attacks for "+damage+" damage! 💥");
+
+ // Boss retaliates after each attack
+ if(boss>0){
+  setTimeout(()=>{
+   let target=["Hasini","Harini","Harish"][turn%3];
+   let hit=superMode && target==="Harish" ? 5 : 12;
+   hp[target]=Math.max(0,hp[target]-hit);
+   say("Shadow Boss attacks "+target+"! -"+hit+" HP!");
+   effect("💥");
+   update();
+   busy=false;
+   if(hp.Hasini+hp.Harini+hp.Harish===0){
+    say("The cousins need another chance!");
+    setTimeout(replay,1200);
+   }
+  },400);
+ }else{
+  update();
+  setTimeout(endGame,700);
+ }
+ update();
+}
+
+function healTeam(){
+ if(finished || busy)return;
+ ["Hasini","Harini","Harish"].forEach(n=>{
+  hp[n]=Math.min(100,hp[n]+20);
+ });
+ effect("💚 TEAM HEAL!");
+ say("Everyone recovers 20 HP!");
+ update();
+}
+
+function toggleMode(){
+ if(finished)return;
+ superMode=!superMode;
+ document.getElementById("harishPower").textContent=
+  superMode?"🔥 SUPER SAIYAN MODE!":"🔵 LEGENDARY AURA";
+ document.getElementById("harishAvatar").textContent=
+  superMode?"🌌":"⚡";
+ document.getElementById("cardHarish").style.filter=
+  superMode?"hue-rotate(100deg) brightness(1.5)":"none";
+ effect(superMode?"⚡ AWAKENING! ⚡":"🔵 AURA!");
+ say(superMode?
+  "HARISH HAS UNLOCKED SUPER MODE! Special attacks deal 90 damage!":
+  "Harish returns to normal mode.");
+}
+
+function endGame(){
+ if(finished)return;
+ finished=true;
+ document.getElementById("end").style.display="block";
+ document.getElementById("dialogue").textContent=finalSpeech;
+ say("THE COUSINS HAVE WON! 🏆");
+ effect("🏆 VICTORY! 🎉");
+ setTimeout(speakAgain,1000);
+}
+
+function speakAgain(){
+ if(!("speechSynthesis" in window)){
+  say("Voice playback isn't supported in this browser. Read the message aloud!");
+  return;
+ }
+ speechSynthesis.cancel();
+ const voice=new SpeechSynthesisUtterance(finalSpeech);
+ voice.lang="en-IN";
+ voice.rate=0.92;
+ voice.pitch=1.05;
+ speechSynthesis.speak(voice);
+}
+
+function replay(){
+ if("speechSynthesis" in window)speechSynthesis.cancel();
+ boss=300;
+ hp={Hasini:100,Harini:100,Harish:100};
+ superMode=false;
+ finished=false;
+ busy=false;
+ turn=0;
+ document.getElementById("end").style.display="none";
+ document.getElementById("harishPower").textContent="🔵 LEGENDARY AURA";
+ document.getElementById("harishAvatar").textContent="⚡";
+ document.getElementById("cardHarish").style.filter="none";
+ document.getElementById("boss").textContent="👹";
+ say("The Shadow Boss has returned! Fight!");
+ update();
+}
+
+update();
+</script>
+</body>
+</html>
